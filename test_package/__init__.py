@@ -1,0 +1,1 @@
+from test_package.sayhello import MyClass
