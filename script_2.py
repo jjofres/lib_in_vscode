@@ -1,5 +1,5 @@
 import numpy as np
-from functions_python import run_minimization
+from non_cython_functions import run_minimization
 import time
 
 tic = time.time()
