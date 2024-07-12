@@ -32,3 +32,19 @@ cpdef double cL(double T, double y1, double y2, cnp.ndarray[cnp.double_t, ndim=2
     for i in range(n):
         result += fpol(T, p[i], y1, y2)
     return result
+
+def calc_Gconf(double T, double[:] ys, double[:] m, int len_comp):
+    cdef int si, i, isi
+    cdef double ce = 0
+    cdef double G_conf
+    cdef double R = 8.314
+    cdef int len_m = len(m)
+
+    for si in range(len_m):
+        for i in range(len_comp):
+            isi = i * len_m + si
+            ce += m[si] * xlogx(ys[isi])
+
+    G_conf = R * T * ce / sum(m)
+    return G_conf
+

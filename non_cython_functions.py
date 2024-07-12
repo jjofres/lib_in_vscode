@@ -1,13 +1,12 @@
 import numpy as np
 from scipy.optimize import minimize, Bounds, LinearConstraint
 
-from functions_cython import xlogx, separate_nonzero_vector, cL
-
+from functions_cython import xlogx, separate_nonzero_vector, cL, calc_Gconf
 comp = ['A', 'B', 'Va']
 p_in = {'A,B/Va': [[0., 0., 0.], [0., 0., 0.], [0., 0., 0.]], 'A/Va,B': [[0., 0., 0.], [0., 0., 0.], [0., 0., 0.]]}
 n_SL = 3
 R = 8.314
-m = [1, 2, 3]
+m = [1., 2., 3.]
 
 G_end_mbrs_phase = np.zeros((3, 3, 3))
 
@@ -18,10 +17,10 @@ def L(T: float, S: str, y1: float, y2: float, params_in: dict[str, list]) -> flo
     except KeyError:
         p = np.array([[0., 0., 0.]])
 
-    return cL(T, y1, y2, p)#sum([fpol(T, np.array(pi), y1, y2) for pi in p])
+    return cL(T, y1, y2, p)#sum([fpol(T, np.array(pi), y1, y2) for pi in p]) #
 
 
-def funct_to_optimize(T: float, ys: list) -> float:
+def calc_GXS(T, ys):
     G_XS = 0
     for i in range(len(comp)):
         for j in range(len(comp)):
@@ -31,28 +30,63 @@ def funct_to_optimize(T: float, ys: list) -> float:
                         isi = i * len(m) + si
                         jsi = j * len(m) + si
                         ksi = k * len(m) + si
-                        G_XS += L(T, comp[i]+','+comp[j]+'/'+comp[k], ys[isi], ys[jsi], p_in)
-                        G_XS += L(T, comp[i]+'/'+comp[j]+','+comp[k], ys[jsi], ys[ksi], p_in)
+                        G_XS += L(T, comp[i] + ',' + comp[j] + '/' + comp[k], ys[isi], ys[jsi], p_in)
+                        G_XS += L(T, comp[i] + '/' + comp[j] + ',' + comp[k], ys[jsi], ys[ksi], p_in)
+    return G_XS
 
-    ce = 0
-    for si in range(len(m)):
-        for i in range(len(comp)):
-            isi = i * len(m) + si
-            ce += m[si] * xlogx(ys[isi])
-    G_conf = R * T * ce / sum(m)
+# def calc_Gconf(T, ys, m, len_comp):
+#     ce = 0
+#     len_m = len(m)
+#     for si in range(len_m):
+#         for i in range(len_comp):
+#             isi = i * len_m + si
+#             ce += m[si] * xlogx(ys[isi])
+#     G_conf = R * T * ce / sum(m)
+#
+#     return G_conf
 
+def calc_Gref(ys, G_end_mbrs_phase, m):
     G_ref = 0
     for ix, val in np.ndenumerate(G_end_mbrs_phase):
         ys2prod = []
         for i in range(len(ix)):
             ii = ix[i] * len(m) + i
             ys2prod.append(ys[ii])
-        # ys2prod = [y[ix[i]][i] for i in range(len(ix))]
-        # p = np.prod(ys2prod)
         p = 1
         for yp in ys2prod:
             p = p * yp
         G_ref += val * p
+    return G_ref
+def funct_to_optimize(T: float, ys: list) -> float:
+    G_XS = calc_GXS(T, ys)#0
+    # for i in range(len(comp)):
+    #     for j in range(len(comp)):
+    #         if i != j:
+    #             for k in range(len(comp)):
+    #                 for si in range(n_SL):
+    #                     isi = i * len(m) + si
+    #                     jsi = j * len(m) + si
+    #                     ksi = k * len(m) + si
+    #                     G_XS += L(T, comp[i]+','+comp[j]+'/'+comp[k], ys[isi], ys[jsi], p_in)
+    #                     G_XS += L(T, comp[i]+'/'+comp[j]+','+comp[k], ys[jsi], ys[ksi], p_in)
+
+    # ce = 0
+    # for si in range(len(m)):
+    #     for i in range(len(comp)):
+    #         isi = i * len(m) + si
+    #         ce += m[si] * xlogx(ys[isi])
+    G_conf = calc_Gconf(T, np.array(ys), np.array(m), len(comp))#R * T * ce / sum(m)
+
+    G_ref = calc_Gref(ys, G_end_mbrs_phase, m)#0
+    # for ix, val in np.ndenumerate(G_end_mbrs_phase):
+    #     ys2prod = []
+    #     for i in range(len(ix)):
+    #         ii = ix[i] * len(m) + i
+    #         ys2prod.append(ys[ii])
+    #     p = 1
+    #     for yp in ys2prod:
+    #         p = p * yp
+    #     G_ref += val * p
 
     return G_ref + G_conf + G_XS
 
