@@ -27,10 +27,10 @@ cpdef list separate_nonzero_vector(cnp.ndarray[cnp.int_t, ndim=1] vecti):
     return separated_vectis
 
 cpdef double cL(double T, double y1, double y2, cnp.ndarray[cnp.double_t, ndim=2] p):
-    cdef int i, n = p.shape[0]
+    # cdef int i, n = p.shape[0]
     cdef double result = 0.0
-    for i in range(n):
-        result += fpol(T, p[i], y1, y2)
+    for pi in p:
+        result += fpol(T, pi, y1, y2)
     return result
 
 def calc_Gconf(double T, double[:] ys, double[:] m, int len_comp):
